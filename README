@@ -1,0 +1,92 @@
+
+delayed-shutdown
+----------------
+
+Initscript that delays the shutdown procedure as long as a predefined
+lockfile (no-shutdown lockfile) exists. The no-shutdown lockfile should be set
+whenever a running process, for instance a backup script, should not be
+interrupted by a system shutdown or reboot. When started, this script has no
+impact on system performance.
+
+
+Manual Installation:
+
+As user 'root' follow the instructions to install the file in your initscripts
+directory:
+
+  cp delayed-shutdown /etc/init.d/
+  chmod +x /etc/init.d/delayed-shutdown
+
+For RedHat and relatives run:
+
+  chkconfig --add delayed-shutdown
+
+For Debian and relatives run:
+
+  update-rc.d delayed-shutdown defaults
+
+
+Manual De-installation:
+
+If for any reason you need to remove 'delayed-shutdown' from your system do
+the following:
+
+For RedHat and relatives run:
+
+  chkconfig --del delayed-shutdown
+
+For Debian and relatives run:
+
+  update-rc.d -f delayed-shutdown remove
+
+Delete the initscript:
+
+  rm /etc/init.d/delayed-shutdown
+
+
+Usage:
+
+In order to delay the shutdown process until your software finishes its
+operation, you should create the no-shutdown lock file:
+
+         /var/lock/noshutdown.lock
+
+Then let your software do its job and, when finished, delete the no-shutdown
+lock file. In case of a script that would be:
+
+     lockfile /var/lock/noshutdown.lock
+     ... [script is working] ...
+     rm -f /var/lock/noshutdown.lock
+
+See the included example script 'test.sh'.
+
+
+Feedback: http://www.g-loaded.eu/forums/
+
+Released under the terms of the MIT license:
+
+Copyright (c) 2008 George Notaras <gnot [at] g-loaded.eu>, CodeTRAX.org
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+
+

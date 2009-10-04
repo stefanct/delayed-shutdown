@@ -1,0 +1,156 @@
+#! /usr/bin/env bash
+#
+# delayed-shutdown: Delays shutdown if the no-shutdown lock file exists
+#
+# version: 1.0
+#
+# Copyright (c) 2008 George Notaras <gnot [at] g-loaded.eu>, CodeTRAX.org
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+#
+# chkconfig: 2345 0 0
+#
+# description: delayed-shutdown delays the shutdown procedure as long as a pre-
+#              defined lockfile (no-shutdown lockfile) exists. The no-shutdown
+#              lockfile should be set whenever a running process, for instance
+#              a backup script, should not be interrupted by a system shutdown
+#              or reboot. When started, this script has no impact on system
+#              performance.
+#
+## BEGIN INIT INFO
+# Provides: delayed-shutdown
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 6
+# Required-Start:
+# Should-Start:
+# Short-Description: Delays shutdown if the no-shutdown lock file exists
+# Description: delayed-shutdown delays the shutdown procedure as long as a pre-
+#              defined lockfile (no-shutdown lockfile) exists. The no-shutdown
+#              lockfile should be set whenever a running process, for instance
+#              a backup script, should not be interrupted by a system shutdown
+#              or reboot. When started, this script has no impact on system
+#              performance.
+## END INIT INFO
+#
+# Usage:
+#     In order to delay the shutdown process until your software finishes its
+#     operation, you should create the no-shutdown lock file:
+#
+#         /var/lock/noshutdown.lock
+#
+#     Then let your software do its job and, when finished, delete the no-
+#     shutdown lock file. In case of a script that would be:
+#
+#     lockfile /var/lock/noshutdown.lock
+#     ... [script is working] ...
+#     rm -f /var/lock/noshutdown.lock
+#
+
+# Settings BEGIN
+noshutdownlockfile="/var/lock/noshutdown.lock"
+delay=30
+message="detected no-shutdown lock. shutdown is delayed for $delay seconds"
+# Settings END
+
+# Source function library.
+. /etc/init.d/functions
+
+RETVAL=0
+prog="delayed-shutdown"
+lockfile="/var/lock/subsys/$prog"
+
+start() {
+  echo -n $"Starting $prog: "
+  if [ -e $lockfile ] ; then
+    RETVAL=1
+    echo_failure
+  else
+    touch $lockfile
+    echo_success
+  fi
+  echo
+  
+}
+
+stop() {
+  if [ -e $lockfile ] ; then
+    # Delay shutdown until $noshutdownlockfile is gone
+    while [ -e $noshutdownlockfile ] ; do
+      logger -t $prog $message
+      #wall $message
+      echo $message
+      sleep $delay
+    done
+    echo -n $"Stopping $prog: "
+    rm -f $lockfile
+    echo_success
+  else
+    echo -n $"Stopping $prog: "
+    RETVAL=1
+    echo_failure
+  fi
+  echo
+}
+
+dostatus() {
+  if [ -e $lockfile ] ; then
+    echo "$prog is started."
+  else
+    echo "$prog is stopped."
+  fi
+}
+
+restart() {
+  stop
+  start
+}
+
+condrestart() {
+  [ -e $lockfile ] && restart
+}
+
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  status)
+    dostatus
+    ;;
+  restart|reload)
+    restart
+    ;;
+  condrestart)
+    condrestart
+    ;;
+  *)
+    echo "Usage: $(basename $0) {start|stop|status|restart|reload|condrestart}"
+    exit 1
+esac
+
+exit $RETVAL
+
+
+

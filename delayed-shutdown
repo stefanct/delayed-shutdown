@@ -71,47 +71,49 @@
 # Settings BEGIN
 noshutdownlockfile="/var/lock/noshutdown.lock"
 delay=30
-message="detected no-shutdown lock. shutdown is delayed for $delay seconds"
+message="Detected no-shutdown lock. Shutdown is delayed for $delay seconds."
 # Settings END
 
 # Source function library.
-. /etc/init.d/functions
+. /lib/lsb/init-functions
 
 RETVAL=0
 prog="delayed-shutdown"
 lockfile="/var/lock/subsys/$prog"
 
 start() {
-  echo -n $"Starting $prog: "
+  log_daemon_msg "Starting $prog"
   if [ -e $lockfile ] ; then
     RETVAL=1
-    echo_failure
+    log_end_msg $RETVAL
+    log_warning_msg "Apparently already running"
   else
-    touch $lockfile
-    echo_success
+    ret=$( { touch $lockfile ; } 2>&1 )
+    RETVAL=$?
+    log_end_msg $RETVAL
+    if [ "$RETVAL" -ne 0 ]; then
+      log_warning_msg "Could not create lock file: $ret"
+    fi
   fi
-  echo
-  
 }
 
 stop() {
+  log_daemon_msg "Stopping $prog and waiting for important programs to finish"
   if [ -e $lockfile ] ; then
     # Delay shutdown until $noshutdownlockfile is gone
     while [ -e $noshutdownlockfile ] ; do
       logger -t $prog $message
       #wall $message
-      echo $message
+      log_progress_msg $message
       sleep $delay
     done
-    echo -n $"Stopping $prog: "
     rm -f $lockfile
-    echo_success
+    log_end_msg $RETVAL
   else
-    echo -n $"Stopping $prog: "
     RETVAL=1
-    echo_failure
+    log_end_msg $RETVAL
+    log_warning_msg "Apparently $prog is not activated."
   fi
-  echo
 }
 
 dostatus() {

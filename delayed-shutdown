@@ -79,7 +79,19 @@ message="Detected no-shutdown lock. Shutdown is delayed for $delay seconds."
 
 RETVAL=0
 prog="delayed-shutdown"
-lockfile="/var/lock/subsys/$prog"
+lockdir="/var/lock/subsys/"
+
+ensure_lockfile () {
+  if [ ! -e "$lockdir" ]; then
+    lockdir="/var/run/"
+  fi
+  mkdir -p "$lockdir" > /dev/null 2>&1
+  if [ ! -e "$lockdir" ]; then
+    log_failure_msg "Lockdir \"$lockdir\" does not exist"
+    exit 1
+  fi
+  lockfile="$lockdir$prog"
+}
 
 start() {
   log_daemon_msg "Starting $prog"
@@ -133,6 +145,7 @@ condrestart() {
   [ -e $lockfile ] && restart
 }
 
+ensure_lockfile
 
 case "$1" in
   start)

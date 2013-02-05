@@ -69,8 +69,7 @@
 #     you can use the lockfile utility (shipped with procmail).
 
 # Settings BEGIN
-noshutdownlockfile="/var/lock/noshutdown.lock"
-message="Sorry, time ran out after $timeout seconds. Ignoring stale lock file \"$noshutdownlockfile\"."
+noshutdownlockdir="/var/lock/noshutdown/"
 # time values in seconds
 delay=1
 timeout=0 # a value less than 1 means indefinite
@@ -95,6 +94,22 @@ ensure_lockfile () {
   lockfile="$lockdir$prog"
 }
 
+is_locked () {
+  stale_file=""
+  # legacy file
+  if test -e /var/lock/noshutdown.lock ; then
+    stale_file="/var/lock/noshutdown.lock"
+    return 0
+  fi
+  for f in ${noshutdownlockdir}*lock ; do
+    if test -e "$f" ; then
+      stale_file="$f"
+      return 0
+    fi
+  done
+  return 1
+}
+
 start() {
   log_daemon_msg "Starting $prog"
   if [ -e $lockfile ] ; then
@@ -102,11 +117,11 @@ start() {
     log_end_msg $RETVAL
     log_warning_msg "Apparently already running"
   else
-    ret=$( { touch $lockfile ; } 2>&1 )
+    ret=$( { touch $lockfile && mkdir -p "$noshutdownlockdir" ; } 2>&1 )
     RETVAL=$?
     log_end_msg $RETVAL
     if [ "$RETVAL" -ne 0 ]; then
-      log_warning_msg "Could not create lock file: $ret"
+      log_warning_msg "Could not initialize $prog: $ret"
     fi
   fi
 }
@@ -117,8 +132,9 @@ stop() {
     rm -f $lockfile
     # Delay shutdown until $noshutdownlockfile is gone
     end=$( date --date="$timeout sec" +%s )
-    while [ -e $noshutdownlockfile ] ; do
+    while is_locked ; do
       if [ "$timeout" -gt 0 ] && [ $(date +%s) -ge "$end" ]; then
+        message="Sorry, time ran out after $timeout seconds. Ignoring stale lock file \"$stale_file\"."
         RETVAL=1
         log_end_msg $RETVAL
         log_failure_msg $message

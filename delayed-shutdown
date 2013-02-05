@@ -70,8 +70,10 @@
 
 # Settings BEGIN
 noshutdownlockfile="/var/lock/noshutdown.lock"
-delay=30
-message="Detected no-shutdown lock. Shutdown is delayed for $delay seconds."
+message="Sorry, time ran out after $timeout seconds. Ignoring stale lock file \"$noshutdownlockfile\"."
+# time values in seconds
+delay=1
+timeout=0 # a value less than 1 means indefinite
 # Settings END
 
 # Source function library.
@@ -112,14 +114,20 @@ start() {
 stop() {
   log_daemon_msg "Stopping $prog and waiting for important programs to finish"
   if [ -e $lockfile ] ; then
+    rm -f $lockfile
     # Delay shutdown until $noshutdownlockfile is gone
+    end=$( date --date="$timeout sec" +%s )
     while [ -e $noshutdownlockfile ] ; do
-      logger -t $prog $message
-      #wall $message
-      log_progress_msg $message
+      if [ "$timeout" -gt 0 ] && [ $(date +%s) -ge "$end" ]; then
+        RETVAL=1
+        log_end_msg $RETVAL
+        log_failure_msg $message
+        logger -t $prog $message
+        #wall $message
+        return
+      fi
       sleep $delay
     done
-    rm -f $lockfile
     log_end_msg $RETVAL
   else
     RETVAL=1

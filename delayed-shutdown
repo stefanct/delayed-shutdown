@@ -60,10 +60,13 @@
 #     Then let your software do its job and, when finished, delete the no-
 #     shutdown lock file. In case of a script that would be:
 #
-#     lockfile /var/lock/noshutdown.lock
+#     touch /var/lock/noshutdown.lock
 #     ... [script is working] ...
 #     rm -f /var/lock/noshutdown.lock
 #
+#     Please note that this does not support multiple concurrent applications.
+#     If you need that functionality and can live with serialized execution
+#     you can use the lockfile utility (shipped with procmail).
 
 # Settings BEGIN
 noshutdownlockfile="/var/lock/noshutdown.lock"
